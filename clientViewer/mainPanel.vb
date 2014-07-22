@@ -58,9 +58,13 @@ Public Class mainPanel
 
         msg = "set name monitor"
         SendMessage2(socket, msg, msg.Length)
+
         msg = "updateTable 1 1 4 1 1 set name monitor"
         SendMessage2(socket, msg, msg.Length)
-        'SendMessage2(socket, "set name monitor", "set name monitor".Length)
+
+        msg = "set monitor 1"
+        SendMessage2(socket, msg, msg.Length)
+
         Return socket
 
     End Function
@@ -85,8 +89,12 @@ Public Class mainPanel
             End If
             message = Nothing
             message = decodeMessage(dataReceived, bytesReceived)
+
+            'For i As Integer = 0 To bytesReceived
+            'Console.WriteLine(dataReceived(i))
+            'Next
+            'Console.WriteLine("Bytes Received: " & bytesReceived)
             'Console.WriteLine("Message: " & message)
-            'we dont get here
             Console.WriteLine("We got here")
             messageSplit = Split(message, " ", 2)
 
@@ -123,12 +131,14 @@ Public Class mainPanel
         Dim decodedBytes() As Byte
 
         'Get our mask index position
-        If ((data(1) & CByte(&H7F)) = 126) Then
+        maskIndex = 2
+        Console.WriteLine((data(1) And CByte(&H7F)))
+        If ((data(1) And CByte(&H7F)) = 126) Then
             maskIndex = 4
-        ElseIf ((data(1) & CByte(&H7F)) = 127) Then
+        ElseIf ((data(1) And CByte(&H7F)) = 127) Then
             maskIndex = 10
-        Else
-            maskIndex = 2
+            'Else
+            '   maskIndex = 2
         End If
 
         ReDim decodedBytes(len - maskIndex - 4)
@@ -148,6 +158,8 @@ Public Class mainPanel
         If (data(1) = len - 4) Then
             'Console.WriteLine("Data(1) = len: '" & System.Text.Encoding.UTF8.GetString(data, maskIndex, len - 4) & "'")
             msg = System.Text.Encoding.UTF8.GetString(data, maskIndex, len - 4)
+        ElseIf (data(1) = len - 2) Then
+            msg = System.Text.Encoding.UTF8.GetString(data, maskIndex, len - 2)
         Else
             'Console.WriteLine(System.Text.Encoding.UTF8.GetString(decodedBytes))
             msg = System.Text.Encoding.UTF8.GetString(decodedBytes)
@@ -243,10 +255,11 @@ Public Class mainPanel
             End If
         Next
 
-
-        If (socket.Send(reply) <= 0) Then
-            Console.WriteLine("WE ARE NOT WRITING!!")
-        End If
+        SyncLock (lockObject)
+            If (socket.Send(reply) <= 0) Then
+                Console.WriteLine("WE ARE NOT WRITING!!")
+            End If
+        End SyncLock
 
     End Sub
 
