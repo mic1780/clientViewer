@@ -6,8 +6,8 @@ Public Class mainPanel
     Dim socket As Socket
 
     Private Sub mainPanel_load(sender As Object, e As EventArgs) Handles MyBase.Load
-        tableUpdate(New String() {"1", "1", "0", "0", "0", "set name User 1"})
-        tableUpdate(New String() {"2", "1", "1", "0", "0", "set name User 2"})
+        'tableUpdate(New String() {"1", "1", "0", "0", "0", "set name User 1"})
+        'tableUpdate(New String() {"2", "1", "1", "0", "0", "set name User 2"})
     End Sub
 
     Private Function Connect(ByVal host As String) As Socket
@@ -59,11 +59,12 @@ Public Class mainPanel
         msg = "set name monitor"
         SendMessage2(socket, msg, msg.Length)
 
-        msg = "updateTable 1 1 4 1 1 set name monitor"
-        SendMessage2(socket, msg, msg.Length)
+        'msg = "updateTable 1 1 4 1 1 set name monitor"
+        'SendMessage2(socket, msg, msg.Length)
 
         msg = "set monitor 1"
         SendMessage2(socket, msg, msg.Length)
+        Console.WriteLine("We are after our second SendMessage2 function")
 
         Return socket
 
@@ -90,27 +91,28 @@ Public Class mainPanel
             message = Nothing
             message = decodeMessage(dataReceived, bytesReceived)
 
-            'For i As Integer = 0 To bytesReceived
-            'Console.WriteLine(dataReceived(i))
-            'Next
-            'Console.WriteLine("Bytes Received: " & bytesReceived)
-            'Console.WriteLine("Message: " & message)
+            For i As Integer = 0 To bytesReceived
+                Console.WriteLine(dataReceived(i))
+            Next
+            Console.WriteLine("Bytes Received: " & bytesReceived)
+            Console.WriteLine("Message: " & message)
             Console.WriteLine("We got here")
             messageSplit = Split(message, " ", 2)
 
-            If (messageSplit(0).ToLower() = "updatetable") Then
-                Console.WriteLine("We got here")
-                ' = New String() {messageSplit(0), messageSplit(1), messageSplit(2), messageSplit(3), messageSplit(4), messageSplit(5)}
-                Dim tableCells As String() = Split(messageSplit(1), " ", 6)
-                'messageSplit = Split(messageSplit(1), " ", 6)
-                If Me.clientTable.InvokeRequired Then
-                    Me.clientTable.Invoke(New Action(Sub() tableUpdate(tableCells)))
-                Else
-                    tableUpdate(tableCells)
-                End If
-                'SyncLock (lockObject)
+            If (messageSplit(0).ToLower() = "update") Then
 
-                'End SyncLock
+                Console.WriteLine("We got here")
+                messageSplit = Split(messageSplit(1), " ", 2)
+
+                Dim socketInt As Integer = Convert.ChangeType(messageSplit(0), GetType(Integer))
+                'messageSplit = Split(messageSplit(1), " ", 6)
+
+                If Me.clientTable.InvokeRequired Then
+                    Me.clientTable.Invoke(New Action(Sub() queryTable(socketInt, messageSplit(1))))
+                Else
+                    queryTable(socketInt, messageSplit(1))
+                End If
+
             End If
             Console.WriteLine("Message: '" & message & "'")
 
@@ -155,22 +157,17 @@ Public Class mainPanel
             j += 1
         Next
 
-        If (data(1) = len - 4) Then
-            'Console.WriteLine("Data(1) = len: '" & System.Text.Encoding.UTF8.GetString(data, maskIndex, len - 4) & "'")
-            msg = System.Text.Encoding.UTF8.GetString(data, maskIndex, len - 4)
-        ElseIf (data(1) = len - 2) Then
-            msg = System.Text.Encoding.UTF8.GetString(data, maskIndex, len - 2)
-        Else
-            'Console.WriteLine(System.Text.Encoding.UTF8.GetString(decodedBytes))
-            msg = System.Text.Encoding.UTF8.GetString(decodedBytes)
-        End If
+        msg = System.Text.Encoding.UTF8.GetString(data, maskIndex, data(1))
 
         Return msg
     End Function
 
-    Private Sub tableUpdate(ByRef rowData As String())
+    Private Sub queryTable(ByVal socket As Integer, ByVal message As String)
 
-        If rowData.Count > 0 Then
+        Dim foundRow As DataGridViewRow = Nothing
+        Dim messageSplit As String()
+
+        If message.Length > 0 Then
 
             If clientTable.RowCount > 1 Then
 
@@ -179,18 +176,49 @@ Public Class mainPanel
                     If row.Index = clientTable.Rows.Count - 1 Then
                         Continue For
                     End If
-                    For Each cell In row.Cells
-                        Console.Write(clientTable.Rows(row.Index).Cells(cell.ColumnIndex).Value)
-                        Console.Write(" ")
-                    Next
-                    Console.Write(vbCrLf)
-                    'Console.WriteLine(If(row.Cells(0).Value = 0, "0", row.Cells(0).Value()))
+
+                    If (row.Cells(0).Value = socket.ToString()) Then
+                        foundRow = row
+                        Exit For
+                    End If
                 Next
 
             End If
 
-            clientTable.Rows.Add(rowData)
+            If (foundRow Is Nothing) Then
+                addRow(clientTable, socket, message)
+                'clientTable.Rows.Add(New String() {socket.ToString, "1", "0", "0", message})
+            Else
+                foundRow.Cells("lastCommand").Value = message
+
+                messageSplit = Split(message, " ", 2)
+                If (messageSplit(0).ToLower() = "set") Then
+                    alterRow(foundRow, messageSplit(1))
+                End If
+
+            End If
+
         End If
+
+    End Sub
+
+    Private Sub addRow(ByRef table As DataGridView, ByVal socketNumber As Integer, ByVal lastCommand As String)
+        table.Rows.Add(New String() {socketNumber.ToString, "1", "0", "0", lastCommand})
+    End Sub
+
+    Private Sub alterRow(ByRef row As DataGridViewRow, ByVal command As String)
+        Dim commandArray As String() = Split(command, " ", 2)
+
+        Select Case commandArray(0)
+            Case "active"
+                row.Cells("isActive").Value = commandArray(1)
+            Case "admin"
+                row.Cells("isAdmin").Value = commandArray(1)
+            Case "monitor"
+                row.Cells("isMonitor").Value = commandArray(1)
+            Case Else
+                bottomStatusText.Text = "Invalid set command from socket #" & row.Cells("socketNumber").Value
+        End Select
 
     End Sub
 
@@ -243,7 +271,7 @@ Public Class mainPanel
 
         For i As Integer = 0 To 3
             Randomize()
-            maskingBytes(i) = CByte(Int((128 * Rnd()) + 1) Mod 56 * 2)
+            maskingBytes(i) = CByte(Int((128 * Rnd()) + 1) Mod 56 * 2) 'For security, I recommend changing this if you got this from GitHub
             reply(frameCount + i) = maskingBytes(i)
         Next
 
@@ -255,11 +283,13 @@ Public Class mainPanel
             End If
         Next
 
-        SyncLock (lockObject)
-            If (socket.Send(reply) <= 0) Then
-                Console.WriteLine("WE ARE NOT WRITING!!")
-            End If
-        End SyncLock
+        'SyncLock (lockObject)
+        If (socket.Send(reply) <= 0) Then
+            Console.WriteLine("WE ARE NOT WRITING!!")
+        End If
+        Console.WriteLine("We are at the end of the SendMessage2 Sub")
+
+        'End SyncLock
 
     End Sub
 
@@ -313,7 +343,7 @@ Public Class mainPanel
     End Sub
 
     Private Sub Connect_Click(sender As Object, e As EventArgs) Handles menuItem_Connect.Click
-        Dim msg As String
+        'Dim msg As String
         If (Not (socket Is Nothing OrElse socket.Connected = False)) Then
             Exit Sub
         End If

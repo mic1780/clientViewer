@@ -23,12 +23,6 @@ Partial Class mainPanel
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.clientTable = New System.Windows.Forms.DataGridView()
-        Me.ID = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.socketNumber = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.Active = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.isAdmin = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.isMonitor = New System.Windows.Forms.DataGridViewTextBoxColumn()
-        Me.lastCommand = New System.Windows.Forms.DataGridViewTextBoxColumn()
         Me.Label1 = New System.Windows.Forms.Label()
         Me.Label2 = New System.Windows.Forms.Label()
         Me.actionList = New System.Windows.Forms.ListBox()
@@ -41,6 +35,11 @@ Partial Class mainPanel
         Me.bottomStatusText = New System.Windows.Forms.ToolStripStatusLabel()
         Me.bottomSeperater = New System.Windows.Forms.ToolStripStatusLabel()
         Me.connectionStatus = New System.Windows.Forms.ToolStripStatusLabel()
+        Me.socketNumber = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.isActive = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.isAdmin = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.isMonitor = New System.Windows.Forms.DataGridViewTextBoxColumn()
+        Me.lastCommand = New System.Windows.Forms.DataGridViewTextBoxColumn()
         CType(Me.clientTable, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.MenuStrip1.SuspendLayout()
         Me.StatusStrip1.SuspendLayout()
@@ -49,54 +48,12 @@ Partial Class mainPanel
         'clientTable
         '
         Me.clientTable.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        Me.clientTable.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.ID, Me.socketNumber, Me.Active, Me.isAdmin, Me.isMonitor, Me.lastCommand})
+        Me.clientTable.Columns.AddRange(New System.Windows.Forms.DataGridViewColumn() {Me.socketNumber, Me.isActive, Me.isAdmin, Me.isMonitor, Me.lastCommand})
         Me.clientTable.Location = New System.Drawing.Point(12, 57)
         Me.clientTable.Name = "clientTable"
         Me.clientTable.RowTemplate.Height = 24
         Me.clientTable.Size = New System.Drawing.Size(606, 325)
         Me.clientTable.TabIndex = 0
-        '
-        'ID
-        '
-        Me.ID.HeaderText = "ID"
-        Me.ID.Name = "ID"
-        Me.ID.ReadOnly = True
-        Me.ID.Width = 40
-        '
-        'socketNumber
-        '
-        Me.socketNumber.HeaderText = "Socket #"
-        Me.socketNumber.Name = "socketNumber"
-        Me.socketNumber.ReadOnly = True
-        Me.socketNumber.Width = 70
-        '
-        'Active
-        '
-        Me.Active.HeaderText = "Is Active"
-        Me.Active.Name = "Active"
-        Me.Active.ReadOnly = True
-        Me.Active.Width = 70
-        '
-        'isAdmin
-        '
-        Me.isAdmin.HeaderText = "Is Admin"
-        Me.isAdmin.Name = "isAdmin"
-        Me.isAdmin.ReadOnly = True
-        Me.isAdmin.Width = 70
-        '
-        'isMonitor
-        '
-        Me.isMonitor.HeaderText = "Is Monitor"
-        Me.isMonitor.Name = "isMonitor"
-        Me.isMonitor.ReadOnly = True
-        Me.isMonitor.Width = 75
-        '
-        'lastCommand
-        '
-        Me.lastCommand.HeaderText = "Last Command"
-        Me.lastCommand.Name = "lastCommand"
-        Me.lastCommand.ReadOnly = True
-        Me.lastCommand.Width = 238
         '
         'Label1
         '
@@ -180,7 +137,7 @@ Partial Class mainPanel
         'bottomSeperater
         '
         Me.bottomSeperater.Name = "bottomSeperater"
-        Me.bottomSeperater.Size = New System.Drawing.Size(490, 20)
+        Me.bottomSeperater.Size = New System.Drawing.Size(521, 20)
         Me.bottomSeperater.Spring = True
         '
         'connectionStatus
@@ -190,6 +147,41 @@ Partial Class mainPanel
         Me.connectionStatus.Size = New System.Drawing.Size(115, 20)
         Me.connectionStatus.Text = "Disconnected"
         Me.connectionStatus.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage
+        '
+        'socketNumber
+        '
+        Me.socketNumber.HeaderText = "Socket #"
+        Me.socketNumber.Name = "socketNumber"
+        Me.socketNumber.ReadOnly = True
+        Me.socketNumber.Width = 70
+        '
+        'isActive
+        '
+        Me.isActive.HeaderText = "Is Active"
+        Me.isActive.Name = "isActive"
+        Me.isActive.ReadOnly = True
+        Me.isActive.Width = 70
+        '
+        'isAdmin
+        '
+        Me.isAdmin.HeaderText = "Is Admin"
+        Me.isAdmin.Name = "isAdmin"
+        Me.isAdmin.ReadOnly = True
+        Me.isAdmin.Width = 70
+        '
+        'isMonitor
+        '
+        Me.isMonitor.HeaderText = "Is Monitor"
+        Me.isMonitor.Name = "isMonitor"
+        Me.isMonitor.ReadOnly = True
+        Me.isMonitor.Width = 75
+        '
+        'lastCommand
+        '
+        Me.lastCommand.HeaderText = "Last Command"
+        Me.lastCommand.Name = "lastCommand"
+        Me.lastCommand.ReadOnly = True
+        Me.lastCommand.Width = 238
         '
         'mainPanel
         '
@@ -226,15 +218,14 @@ Partial Class mainPanel
     Friend WithEvents menuItem_Connect As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItem_Disconnect As System.Windows.Forms.ToolStripMenuItem
     Friend WithEvents menuItem_Help As System.Windows.Forms.ToolStripMenuItem
-    Friend WithEvents ID As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents socketNumber As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents Active As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents isAdmin As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents isMonitor As System.Windows.Forms.DataGridViewTextBoxColumn
-    Friend WithEvents lastCommand As System.Windows.Forms.DataGridViewTextBoxColumn
     Friend WithEvents StatusStrip1 As System.Windows.Forms.StatusStrip
     Friend WithEvents bottomStatusText As System.Windows.Forms.ToolStripStatusLabel
     Friend WithEvents connectionStatus As System.Windows.Forms.ToolStripStatusLabel
     Friend WithEvents bottomSeperater As System.Windows.Forms.ToolStripStatusLabel
+    Friend WithEvents socketNumber As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents isActive As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents isAdmin As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents isMonitor As System.Windows.Forms.DataGridViewTextBoxColumn
+    Friend WithEvents lastCommand As System.Windows.Forms.DataGridViewTextBoxColumn
 
 End Class
