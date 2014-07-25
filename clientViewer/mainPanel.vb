@@ -2,12 +2,11 @@
 Public Class mainPanel
     Dim msg As String
     Dim lockObject As New Object()
+    Dim statusLock As New Object()
     Dim socketThread As Threading.Thread
     Dim socket As Socket
 
     Private Sub mainPanel_load(sender As Object, e As EventArgs) Handles MyBase.Load
-        'tableUpdate(New String() {"1", "1", "0", "0", "0", "set name User 1"})
-        'tableUpdate(New String() {"2", "1", "1", "0", "0", "set name User 2"})
     End Sub
 
     Private Function Connect(ByVal host As String) As Socket
@@ -16,7 +15,9 @@ Public Class mainPanel
         Dim octString As String = ""
         Dim request As String = ""
 
-        Dim socket As Socket = New Socket(SocketType.Stream, ProtocolType.Tcp)
+        socket = New Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+        socket.SendTimeout = 1000
+
         Try
             socket.Connect(host, 1780)
         Catch
@@ -50,21 +51,20 @@ Public Class mainPanel
         writer.Write(request)
         writer.Flush()
         While (Not (reader.Peek() = Nothing Or reader.Peek() = -1))
-            Console.WriteLine("'" & reader.Peek() & "'")
+            'Console.WriteLine("'" & reader.Peek() & "'")
             Console.WriteLine(reader.ReadLine())
         End While
+        writer.Close()
+        reader.Close()
+        stream.Close()
 
         connectionStatus.Text = "Connected"
 
         msg = "set name monitor"
         SendMessage2(socket, msg, msg.Length)
 
-        'msg = "updateTable 1 1 4 1 1 set name monitor"
-        'SendMessage2(socket, msg, msg.Length)
-
         msg = "set monitor 1"
         SendMessage2(socket, msg, msg.Length)
-        Console.WriteLine("We are after our second SendMessage2 function")
 
         Return socket
 
@@ -84,28 +84,22 @@ Public Class mainPanel
 
             'If we received -1 bytes or a closing byte, close the socket
             If (bytesReceived <= 0 OrElse dataReceived(0) = &H88) Then
-                Console.WriteLine("Close byte was received. Closing socket.")
+                bottomStatusText.Text = "Close byte was received. Closing socket."
                 socket.Disconnect(False)
                 Exit While
             End If
             message = Nothing
             message = decodeMessage(dataReceived, bytesReceived)
 
-            For i As Integer = 0 To bytesReceived
-                Console.WriteLine(dataReceived(i))
-            Next
-            Console.WriteLine("Bytes Received: " & bytesReceived)
-            Console.WriteLine("Message: " & message)
-            Console.WriteLine("We got here")
+            updateStatusText("Bytes Received: " & bytesReceived)
+
             messageSplit = Split(message, " ", 2)
 
             If (messageSplit(0).ToLower() = "update") Then
 
-                Console.WriteLine("We got here")
                 messageSplit = Split(messageSplit(1), " ", 2)
 
                 Dim socketInt As Integer = Convert.ChangeType(messageSplit(0), GetType(Integer))
-                'messageSplit = Split(messageSplit(1), " ", 6)
 
                 If Me.clientTable.InvokeRequired Then
                     Me.clientTable.Invoke(New Action(Sub() queryTable(socketInt, messageSplit(1))))
@@ -114,7 +108,6 @@ Public Class mainPanel
                 End If
 
             End If
-            Console.WriteLine("Message: '" & message & "'")
 
         End While
 
@@ -134,13 +127,10 @@ Public Class mainPanel
 
         'Get our mask index position
         maskIndex = 2
-        Console.WriteLine((data(1) And CByte(&H7F)))
         If ((data(1) And CByte(&H7F)) = 126) Then
             maskIndex = 4
         ElseIf ((data(1) And CByte(&H7F)) = 127) Then
             maskIndex = 10
-            'Else
-            '   maskIndex = 2
         End If
 
         ReDim decodedBytes(len - maskIndex - 4)
@@ -152,7 +142,6 @@ Public Class mainPanel
         j = maskIndex + 4
 
         For i = 0 To len - maskIndex - 4
-            'Console.WriteLine(Convert.ToByte(data(j)) Xor mask(i Mod 4))
             decodedBytes(i) = data(j) Xor mask(i Mod 4)
             j += 1
         Next
@@ -187,7 +176,6 @@ Public Class mainPanel
 
             If (foundRow Is Nothing) Then
                 addRow(clientTable, socket, message)
-                'clientTable.Rows.Add(New String() {socket.ToString, "1", "0", "0", message})
             Else
                 foundRow.Cells("lastCommand").Value = message
 
@@ -234,6 +222,7 @@ Public Class mainPanel
     End Function
 
     Sub SendMessage2(ByVal socket As Socket, ByVal message As String, ByVal len As Integer)
+        Dim sentBytes As Integer
         Dim frameCount As Integer
         Dim len16 As UInt16
         Dim reply(len + 8) As [Byte]
@@ -271,7 +260,7 @@ Public Class mainPanel
 
         For i As Integer = 0 To 3
             Randomize()
-            maskingBytes(i) = CByte(Int((128 * Rnd()) + 1) Mod 56 * 2) 'For security, I recommend changing this if you got this from GitHub
+            maskingBytes(i) = CByte(Int((127 * Rnd()) + 1) Mod 56 * 2) 'For security, I recommend changing this if you got this from GitHub
             reply(frameCount + i) = maskingBytes(i)
         Next
 
@@ -283,13 +272,15 @@ Public Class mainPanel
             End If
         Next
 
-        'SyncLock (lockObject)
-        If (socket.Send(reply) <= 0) Then
+        sentBytes = socket.Send(reply, reply.Length, 0)
+
+        If (sentBytes <= 0) Then
             Console.WriteLine("WE ARE NOT WRITING!!")
         End If
-        Console.WriteLine("We are at the end of the SendMessage2 Sub")
 
-        'End SyncLock
+        For i As Integer = 0 To reply.Length - 1
+            reply(i) = Nothing
+        Next
 
     End Sub
 
@@ -342,12 +333,20 @@ Public Class mainPanel
         sck.Send(reply)
     End Sub
 
+    Private Sub updateStatusText(ByVal text As String)
+        SyncLock statusLock
+            bottomStatusText.Text = text
+        End SyncLock
+    End Sub
+
     Private Sub Connect_Click(sender As Object, e As EventArgs) Handles menuItem_Connect.Click
         'Dim msg As String
         If (Not (socket Is Nothing OrElse socket.Connected = False)) Then
             Exit Sub
         End If
-        socket = Connect("127.0.0.1")
+
+        Connect("127.0.0.1")
+
         If (socket IsNot Nothing AndAlso socket.Connected) Then
             socketThread = New Threading.Thread(AddressOf Me.socketActive)
 
@@ -368,7 +367,11 @@ Public Class mainPanel
     End Sub
 
     Private Sub Disconnect_Click(sender As Object, e As EventArgs) Handles menuItem_Disconnect.Click
-        socket.Disconnect(False)
+        Try
+            socket.Disconnect(False)
+        Catch
+            updateStatusText("Failed to disconnect")
+        End Try
         socket = Nothing
     End Sub
 End Class
